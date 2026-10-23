@@ -613,6 +613,54 @@ input:focus-visible {
   gap: 9px;
 }
 
+.waitlist-notice {
+  margin-top: 15px;
+  padding: 12px;
+  border-left: 3px solid var(--deep-green);
+  background: #f0f3ec;
+  color: #344b3c;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.waitlist-notice p {
+  margin: 0;
+}
+
+.claim-seat-action {
+  margin-top: 9px;
+  padding: 9px 11px;
+  border: 0;
+  background: var(--deep-green);
+  color: white;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.claim-seat-action:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.demo-release-action {
+  margin-top: 12px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: #686c64;
+  cursor: pointer;
+  font-size: 10px;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.demo-release-action:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .event-bottom > div {
   display: grid;
   gap: 4px;

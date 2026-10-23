@@ -1,6 +1,21 @@
-import { addToWaitlist } from "../../../src/lib/events.mjs";
+import {
+  addToWaitlist,
+  getWaitlistStatus,
+} from "../../../src/lib/events.mjs";
 
 export const runtime = "nodejs";
+
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const result = getWaitlistStatus(
+    searchParams.get("eventId"),
+    searchParams.get("name"),
+  );
+  if (result.error) {
+    return Response.json({ error: result.error }, { status: result.status });
+  }
+  return Response.json(result);
+}
 
 export async function POST(request) {
   let input;

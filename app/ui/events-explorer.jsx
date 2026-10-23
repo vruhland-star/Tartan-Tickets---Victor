@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function formatEventDate(value) {
   return new Intl.DateTimeFormat("en-US", {
@@ -28,6 +28,59 @@ export default function EventsExplorer({ initialEvents }) {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [waitlistTracking, setWaitlistTracking] = useState(null);
+  const [waitlistNotice, setWaitlistNotice] = useState(null);
+  const [releasePending, setReleasePending] = useState("");
+  const [claimPending, setClaimPending] = useState(false);
+  const [releaseError, setReleaseError] = useState("");
+
+  useEffect(() => {
+    if (!waitlistTracking || waitlistNotice?.status === "claimed") return;
+
+    async function checkWaitlistOffer() {
+      try {
+        const query = new URLSearchParams({
+          eventId: waitlistTracking.eventId,
+          name: waitlistTracking.name,
+        });
+        const response = await fetch(`/api/waitlist?${query}`);
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || "Couldn’t check your waitlist status.");
+        }
+
+        setWaitlistNotice((current) => {
+          if (result.status === "offered") {
+            return { ...result, eventId: waitlistTracking.eventId };
+          }
+          if (result.status === "expired") {
+            return {
+              status: "expired",
+              eventId: waitlistTracking.eventId,
+              notification: "Your 30-minute seat hold has expired.",
+            };
+          }
+          return current?.status === "offered"
+            ? {
+                status: result.status,
+                eventId: waitlistTracking.eventId,
+                notification: "Your seat offer is no longer available.",
+              }
+            : current;
+        });
+      } catch (requestError) {
+        setWaitlistNotice({
+          status: "error",
+          eventId: waitlistTracking.eventId,
+          notification: requestError.message,
+        });
+      }
+    }
+
+    void checkWaitlistOffer();
+    const interval = setInterval(checkWaitlistOffer, 3000);
+    return () => clearInterval(interval);
+  }, [waitlistTracking, waitlistNotice?.status]);
 
   function openAction(event) {
     setActiveEvent(event);
@@ -62,6 +115,12 @@ export default function EventsExplorer({ initialEvents }) {
 
       if (isWaitlist) {
         setNotice(`You’re on the list! You’re #${result.position}.`);
+        setWaitlistTracking({ eventId: activeEvent.id, name: name.trim() });
+        setWaitlistNotice({
+          status: "waiting",
+          eventId: activeEvent.id,
+          notification: `You’re on the list! You’re #${result.position}. Keep this page open for a seat offer.`,
+        });
       } else {
         setNotice(
           activeEvent.priceCents === 0
@@ -80,6 +139,62 @@ export default function EventsExplorer({ initialEvents }) {
       setError("Couldn’t reach the server. Please try again.");
     } finally {
       setPending(false);
+    }
+  }
+
+  async function releaseSeat(eventId) {
+    setReleasePending(eventId);
+    setReleaseError("");
+    try {
+      const response = await fetch("/api/demo/release-seat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setReleaseError(result.error || "Couldn’t simulate a seat release.");
+        return;
+      }
+      setEvents((current) =>
+        current.map((event) => (event.id === eventId ? result.event : event)),
+      );
+    } catch {
+      setReleaseError("Couldn’t reach the server. Please try again.");
+    } finally {
+      setReleasePending("");
+    }
+  }
+
+  async function claimWaitlistSeat(eventId) {
+    if (!waitlistTracking || waitlistTracking.eventId !== eventId || claimPending) return;
+    setClaimPending(true);
+    setReleaseError("");
+    try {
+      const response = await fetch("/api/waitlist/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(waitlistTracking),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setReleaseError(result.error || "Couldn’t claim this seat.");
+        return;
+      }
+      setEvents((current) =>
+        current.map((event) => (event.id === eventId ? result.event : event)),
+      );
+      setWaitlistTracking(null);
+      setWaitlistNotice({
+        status: "claimed",
+        eventId,
+        notification:
+          "Your seat is claimed. Your simulated payment is complete.",
+      });
+    } catch {
+      setReleaseError("Couldn’t reach the server. Please try again.");
+    } finally {
+      setClaimPending(false);
     }
   }
 
@@ -141,6 +256,43 @@ export default function EventsExplorer({ initialEvents }) {
                     {soldOut ? "Join waitlist" : "Buy"} <span aria-hidden="true">↗</span>
                   </button>
                 </div>
+                {waitlistNotice?.eventId === event.id && (
+                  <div className="waitlist-notice" role="status">
+                    <p>{waitlistNotice.notification}</p>
+                    {waitlistNotice.status === "offered" && (
+                      <button
+                        className="claim-seat-action"
+                        type="button"
+                        onClick={() => void claimWaitlistSeat(event.id)}
+                        disabled={claimPending}
+                      >
+                        {claimPending
+                          ? "Claiming seat…"
+                          : event.priceCents === 0
+                            ? "Claim held seat"
+                            : "Claim held seat · Simulated payment"}
+                      </button>
+                    )}
+                    {releaseError && (
+                      <p className="form-message form-error" role="alert">{releaseError}</p>
+                    )}
+                  </div>
+                )}
+                {soldOut && (
+                  <button
+                    className="demo-release-action"
+                    type="button"
+                    onClick={() => void releaseSeat(event.id)}
+                    disabled={releasePending === event.id}
+                  >
+                    {releasePending === event.id
+                      ? "Releasing seat…"
+                      : "Demo: simulate a released seat"}
+                  </button>
+                )}
+                {releaseError && waitlistNotice?.eventId !== event.id && (
+                  <p className="form-message form-error" role="alert">{releaseError}</p>
+                )}
               </div>
             </article>
           );
