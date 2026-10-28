@@ -51,7 +51,10 @@ export default function HomePage() {
           <p className="section-note">Good plans are closer than you think.<br />Pick one and make it yours.</p>
         </div>
         {events.length ? (
-          <EventsExplorer initialEvents={events} />
+          <EventsExplorer
+            initialEvents={events}
+            enableDemoActions={process.env.NODE_ENV !== "production"}
+          />
         ) : (
           <div className="empty-state">No upcoming events yet.</div>
         )}

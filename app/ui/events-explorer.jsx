@@ -21,7 +21,7 @@ function formatPrice(cents) {
   }).format(cents / 100);
 }
 
-export default function EventsExplorer({ initialEvents }) {
+export default function EventsExplorer({ initialEvents, enableDemoActions }) {
   const [events, setEvents] = useState(initialEvents);
   const [activeEvent, setActiveEvent] = useState(null);
   const [name, setName] = useState("");
@@ -149,7 +149,7 @@ export default function EventsExplorer({ initialEvents }) {
       const response = await fetch("/api/demo/release-seat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId }),
+        body: JSON.stringify({ eventId, actorName: "Demo Club Officer" }),
       });
       const result = await response.json();
       if (!response.ok) {
@@ -278,7 +278,7 @@ export default function EventsExplorer({ initialEvents }) {
                     )}
                   </div>
                 )}
-                {soldOut && (
+                {soldOut && enableDemoActions && (
                   <button
                     className="demo-release-action"
                     type="button"

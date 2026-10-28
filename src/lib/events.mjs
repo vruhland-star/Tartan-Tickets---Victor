@@ -1,6 +1,7 @@
 const events = [
   {
     id: "autumn-jazz",
+    clubId: "jazz-collective",
     title: "Autumn Jazz on the Cut",
     category: "LIVE MUSIC",
     description:
@@ -15,6 +16,7 @@ const events = [
   },
   {
     id: "makers-night",
+    clubId: "student-makers",
     title: "Makers After Dark",
     category: "STUDENT SHOWCASE",
     description:
@@ -29,6 +31,7 @@ const events = [
   },
   {
     id: "winter-market",
+    clubId: "campus-community",
     title: "Tartan Winter Market",
     category: "CAMPUS COMMUNITY",
     description:
@@ -49,6 +52,10 @@ const WAITLIST_HOLD_MS = 30 * 60 * 1000;
 
 function getEvent(eventId) {
   return events.find((item) => item.id === eventId);
+}
+
+export function getEventClubId(eventId) {
+  return getEvent(eventId)?.clubId ?? null;
 }
 
 function getActiveHoldCount(eventId, now) {
